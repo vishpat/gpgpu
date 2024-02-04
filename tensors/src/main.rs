@@ -23,12 +23,10 @@ fn example2() -> Result<(), Box<dyn std::error::Error>> {
     let tensor = Tensor::from_slice(&arr_slice, (2, 3), &device)?;
 
     let tensor_ones = Tensor::ones(tensor.shape(), DType::F32, &device)?;
-    let slice = tensor_ones.to_vec2::<f32>()?;
-    println!("Ones tensor {:?}", slice);
+    println!("Ones tensor {tensor_ones}");
 
     let tensor_rand = Tensor::rand(0f32, 1., tensor.shape(), &device)?;
-    let slice = tensor_rand.to_vec2::<f32>()?;
-    println!("Rand tensor {:?}", slice);
+    println!("Rand tensor {tensor_rand}");
 
     Ok(())
 }
@@ -45,7 +43,27 @@ fn example3() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[allow(dead_code)]
+fn example4() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+    let tensor1 = Tensor::ones((4, 4), DType::F32, &device)?;
+    let tensor2 = Tensor::zeros((4, 4), DType::F32, &device)?;
+    let tensor = Tensor::cat(&[&tensor1, &tensor2], 0)?;
+    println!("Tensor {tensor}");
+    Ok(())
+}
+
+#[allow(dead_code)]
+fn example5() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+    let tensor1 = Tensor::rand(0f32, 1., (4, 4), &device)?;
+    let tensor2 = Tensor::rand(0f32, 1., (4, 4), &device)?;
+    let tensor = Tensor::mul(&tensor1, &tensor2)?;
+    println!("Tensor {tensor}");
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    example3()?;
+    example5()?;
     Ok(())
 }
