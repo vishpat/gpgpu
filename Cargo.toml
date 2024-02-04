@@ -1,0 +1,5 @@
+[workspace]
+members = [
+  "tensors"
+]
+resolver=2
