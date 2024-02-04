@@ -1,4 +1,4 @@
-use candle_core::{Device, Tensor, DType};
+use candle_core::{DType, Device, Tensor};
 use ndarray::array;
 
 #[allow(dead_code)]
@@ -15,6 +15,7 @@ fn example1() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn example2() -> Result<(), Box<dyn std::error::Error>> {
     let arr = array![[1., 2., 3.], [4., 5., 6.]];
     let arr_slice = arr.into_shape((2, 3)).to_owned()?.into_raw_vec();
@@ -31,7 +32,20 @@ fn example2() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[allow(dead_code)]
+fn example3() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+    let tensor = Tensor::rand(0f32, 1., (2, 4), &device)?;
+
+    println!("Tensor Shape {:?}", tensor.shape());
+    println!("Tensor DType {:?}", tensor.dtype());
+    println!("Tensor Device {:?}", tensor.device());
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    example2()?;
+    example3()?;
     Ok(())
 }
