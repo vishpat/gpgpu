@@ -2,4 +2,4 @@
 members = [
   "tensors"
 ]
-resolver=2
+resolver="2"
