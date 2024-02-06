@@ -8,6 +8,7 @@ fn scalar() -> Result<(), Box<dyn std::error::Error>> {
     let scalar = scalar_tensor.to_scalar::<f32>()?;
     println!("{scalar}");
     println!("ndim {:?}", scalar_tensor.dims().len());
+    println!("shape {:?}", scalar_tensor.shape());
     Ok(())
 }
 
@@ -18,6 +19,7 @@ fn vector() -> Result<(), Box<dyn std::error::Error>> {
     let vector_tensor = Tensor::from_slice(&vector, (4,), &device)?;
     println!("{vector_tensor}");
     println!("ndim {:?}", vector_tensor.dims().len());
+    println!("shape {:?}", vector_tensor.shape());
     Ok(())
 }
 
