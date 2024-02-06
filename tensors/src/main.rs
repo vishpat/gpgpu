@@ -2,6 +2,15 @@ use candle_core::{DType, Device, Tensor};
 use ndarray::array;
 
 #[allow(dead_code)]
+fn example0() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+    let scalar_tensor = Tensor::new(std::f32::consts::PI, &device)?;
+    let scalar = scalar_tensor.to_scalar::<f32>()?;
+    println!("{scalar}");
+    Ok(())
+}
+
+#[allow(dead_code)]
 fn example1() -> Result<(), Box<dyn std::error::Error>> {
     let arr = array![[1., 2.], [4., 5.]];
     println!("ndarray: {:?}", arr);
@@ -64,6 +73,6 @@ fn example5() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    example5()?;
+    example0()?;
     Ok(())
 }
