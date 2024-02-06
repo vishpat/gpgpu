@@ -7,6 +7,17 @@ fn scalar() -> Result<(), Box<dyn std::error::Error>> {
     let scalar_tensor = Tensor::new(std::f32::consts::PI, &device)?;
     let scalar = scalar_tensor.to_scalar::<f32>()?;
     println!("{scalar}");
+    println!("ndim {:?}", scalar_tensor.dims().len());
+    Ok(())
+}
+
+#[allow(dead_code)]
+fn vector() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+    let vector = vec![1., 2., 3., 4.];
+    let vector_tensor = Tensor::from_slice(&vector, (4,), &device)?;
+    println!("{vector_tensor}");
+    println!("ndim {:?}", vector_tensor.dims().len());
     Ok(())
 }
 
@@ -73,6 +84,6 @@ fn multiple() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    example0()?;
+    vector()?;
     Ok(())
 }
