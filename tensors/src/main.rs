@@ -2,7 +2,7 @@ use candle_core::{DType, Device, Tensor};
 use ndarray::array;
 
 #[allow(dead_code)]
-fn example0() -> Result<(), Box<dyn std::error::Error>> {
+fn scalar() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::new_cuda(0)?;
     let scalar_tensor = Tensor::new(std::f32::consts::PI, &device)?;
     let scalar = scalar_tensor.to_scalar::<f32>()?;
@@ -11,7 +11,7 @@ fn example0() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[allow(dead_code)]
-fn example1() -> Result<(), Box<dyn std::error::Error>> {
+fn init1() -> Result<(), Box<dyn std::error::Error>> {
     let arr = array![[1., 2.], [4., 5.]];
     println!("ndarray: {:?}", arr);
 
@@ -25,7 +25,7 @@ fn example1() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[allow(dead_code)]
-fn example2() -> Result<(), Box<dyn std::error::Error>> {
+fn init2() -> Result<(), Box<dyn std::error::Error>> {
     let arr = array![[1., 2., 3.], [4., 5., 6.]];
     let arr_slice = arr.into_shape((2, 3)).to_owned()?.into_raw_vec();
     let device = Device::new_cuda(0)?;
@@ -41,7 +41,7 @@ fn example2() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[allow(dead_code)]
-fn example3() -> Result<(), Box<dyn std::error::Error>> {
+fn info() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::new_cuda(0)?;
     let tensor = Tensor::rand(0f32, 1., (2, 4), &device)?;
 
@@ -53,7 +53,7 @@ fn example3() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[allow(dead_code)]
-fn example4() -> Result<(), Box<dyn std::error::Error>> {
+fn concat() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::new_cuda(0)?;
     let tensor1 = Tensor::ones((4, 4), DType::F32, &device)?;
     let tensor2 = Tensor::zeros((4, 4), DType::F32, &device)?;
@@ -63,7 +63,7 @@ fn example4() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[allow(dead_code)]
-fn example5() -> Result<(), Box<dyn std::error::Error>> {
+fn multiple() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::new_cuda(0)?;
     let tensor1 = Tensor::rand(0f32, 1., (4, 4), &device)?;
     let tensor2 = Tensor::rand(0f32, 1., (4, 4), &device)?;
