@@ -103,7 +103,32 @@ fn range() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[allow(dead_code)]
+fn broadcast_add() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let tensor1 = Tensor::arange(0f32, 6f32, &device)?.reshape((2, 3))?;
+    println!("Tensor {tensor1}");
+
+    let tensor = tensor1.broadcast_add(&Tensor::new(10f32, &device)?)?;
+    println!("Tensor {tensor}");
+
+    Ok(())
+}
+
+#[allow(dead_code)]
+fn broadcast_mul() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let tensor1 = Tensor::arange(0f32, 6f32, &device)?.reshape((2, 3))?;
+    println!("Tensor {tensor1}");
+
+    let tensor = tensor1.broadcast_mul(&Tensor::new(10f32, &device)?)?;
+    println!("Tensor {tensor}");
+
+    Ok(())
+}
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    range()?;
+    broadcast_mul()?;
     Ok(())
 }
