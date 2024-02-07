@@ -85,7 +85,25 @@ fn multiple() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[allow(dead_code)]
+fn range() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let tensor1 = Tensor::arange(0f32, 6f32, &device)?;
+    println!("Tensor {tensor1}");
+
+    let tensor1 = Tensor::arange(0f32, 6f32, &device)?.reshape((2, 3))?;
+    println!("Tensor {tensor1}");
+
+    let tensor2 = Tensor::arange(0f32, 12f32, &device)?.reshape((3, 4))?;
+    println!("Tensor {tensor2}");
+
+    let tensor = tensor1.matmul(&tensor2)?;
+    println!("Tensor {tensor}");
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    vector()?;
+    range()?;
     Ok(())
 }
