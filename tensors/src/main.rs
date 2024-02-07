@@ -24,7 +24,7 @@ fn vector() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[allow(dead_code)]
-fn init1() -> Result<(), Box<dyn std::error::Error>> {
+fn init_matrix1() -> Result<(), Box<dyn std::error::Error>> {
     let arr = array![[1., 2.], [4., 5.]];
     println!("ndarray: {:?}", arr);
 
@@ -38,7 +38,7 @@ fn init1() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[allow(dead_code)]
-fn init2() -> Result<(), Box<dyn std::error::Error>> {
+fn init_matrix2() -> Result<(), Box<dyn std::error::Error>> {
     let arr = array![[1., 2., 3.], [4., 5., 6.]];
     let arr_slice = arr.into_shape((2, 3)).to_owned()?.into_raw_vec();
     let device = Device::new_cuda(0)?;
