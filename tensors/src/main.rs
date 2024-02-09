@@ -133,13 +133,13 @@ fn broadcast_mul() -> Result<(), Box<dyn std::error::Error>> {
 fn indexing() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::new_cuda(0)?;
 
-    let rand_tensor = Tensor::rand(0f32, 1., (4, 4, 4), &device)?;
+    let rand_tensor = Tensor::rand(0f32, 1., (2, 2, 2), &device)?;
     println!("Tensor {rand_tensor}");
 
-    let index_tensor = Tensor::new(&[2u32, 3u32], &device)?;
+    let index_tensor = Tensor::new(&[0u32], &device)?;
     println!("Index tensor {index_tensor}");
 
-    let selected = rand_tensor.index_select(&index_tensor, 2)?;
+    let selected = rand_tensor.index_select(&index_tensor,  2)?;
     println!("Selected tensor {selected}");
     Ok(())
 }
