@@ -11,7 +11,7 @@ fn load_image_tensor(
         .iter()
         .map(|x| (*x as f32 * 1.0))
         .collect();
-    let tensor = Tensor::from_vec(data, (h, w, 3), device)?.permute((2, 0, 1))?;
+    let tensor = Tensor::from_vec(data, (h, w, 3), device)?;
     Ok((tensor, h, w))
 }
 
@@ -19,7 +19,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::new_cuda(0)?;
     let weights = Tensor::new(&[0.299f32, 0.587f32, 0.114f32], &device)?.unsqueeze(1)?;
     let (img_tensor, h, w) = load_image_tensor(&device)?;
-    let img_tensor = img_tensor.permute((1, 2, 0))?;
     let grayscale = img_tensor.broadcast_matmul(&weights)?.squeeze(2)?;
     let img_data: Vec<u8> = grayscale
         .reshape(w * h)?
