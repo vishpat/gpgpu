@@ -1,0 +1,1 @@
+A sample Rust program to convert a colored PNG to grayscale using CUDA.
