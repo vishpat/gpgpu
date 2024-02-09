@@ -9,9 +9,9 @@ fn load_image_tensor(
     let data = img
         .into_raw()
         .iter()
-        .map(|x| (*x as f32 * 1.0) as f32)
+        .map(|x| (*x as f32 * 1.0))
         .collect();
-    let tensor = Tensor::from_vec(data, (h, w, 3), &device)?.permute((2, 0, 1))?;
+    let tensor = Tensor::from_vec(data, (h, w, 3), device)?.permute((2, 0, 1))?;
     Ok((tensor, h, w))
 }
 
