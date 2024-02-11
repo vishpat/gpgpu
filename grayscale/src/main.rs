@@ -12,7 +12,7 @@ fn load_image_tensor(
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let device = Device::new_cuda(0)?;
+    let device = Device::cuda_if_available(0)?;
     let weights = Tensor::new(&[0.299f32, 0.587f32, 0.114f32], &device)?.unsqueeze(1)?;
     let (img_tensor, h, w) = load_image_tensor(&device)?;
     let grayscale_tensor = img_tensor.broadcast_matmul(&weights)?.flatten(0, 1)?;
