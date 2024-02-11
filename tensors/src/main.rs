@@ -139,12 +139,34 @@ fn indexing() -> Result<(), Box<dyn std::error::Error>> {
     let index_tensor = Tensor::new(&[0u32], &device)?;
     println!("Index tensor {index_tensor}");
 
-    let selected = rand_tensor.index_select(&index_tensor,  2)?;
+    let selected = rand_tensor.index_select(&index_tensor, 2)?;
     println!("Selected tensor {selected}");
     Ok(())
 }
 
+#[allow(dead_code)]
+fn argmax() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let tensor = Tensor::arange(0f32, 10f32, &device)?;
+    println!("Tensor {tensor}");
+
+    let argmax = tensor.argmax(0)?;
+    println!("Argmax {argmax}");
+
+    let tensor = Tensor::rand(0f32, 1., (3, 3), &device)?;
+    println!("Tensor {tensor}");
+
+    let argmax = tensor.argmax(0)?;
+    println!("Argmax: dim 0  {argmax}");
+
+    let argmax = tensor.argmax(1)?;
+    println!("Argmax: dim 1  {argmax}");
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    indexing()?;
+    argmax()?;
     Ok(())
 }
