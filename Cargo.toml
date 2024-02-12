@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "tensors",
-  "grayscale"
+  "grayscale",
+  "workflow"
 ]
 resolver="2"
