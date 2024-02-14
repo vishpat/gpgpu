@@ -1,1 +1,1 @@
-A sample Rust program to convert a colored PNG to grayscale using CUDA.
+A sample Rust program to convert a colored PNG to grayscale using CUDA. The app uses the [candle](https://github.com/huggingface/candle) crate provided by HuggingFace to perform all of the GPU computations.
