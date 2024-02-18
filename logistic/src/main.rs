@@ -1,4 +1,4 @@
-use candle_core::{Device, Tensor, DType};
+use candle_core::{DType, Device, Tensor};
 use candle_datasets::vision::mnist;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -11,15 +11,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .train_images
         .to_device(&device)?
         .broadcast_div(&Tensor::new(255f32, &device)?)?;
-    println!("{images}");
 
-    // All none-zero labels are converted to 1
+    // All zero labels are converted to 1
     let labels = dataset
         .train_labels
         .to_device(&device)?
         .to_dtype(DType::F32)?
-        .broadcast_minimum(&Tensor::new(1f32, &device)?)?;
-    println!("{labels}");
+        .broadcast_eq(&Tensor::new(0f32, &device)?)?;
 
     Ok(())
 }

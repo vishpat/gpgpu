@@ -3,5 +3,5 @@ members = [
   "tensors",
   "grayscale",
   "workflow"
-]
+, "logistic"]
 resolver="2"
