@@ -1,6 +1,7 @@
 use candle_core::{Device, Tensor, D};
 use candle_datasets::vision::mnist;
 use candle_nn::ops::log_softmax;
+use candle_nn::loss;
 
 const BATCH_SIZE: usize = 100;
 
@@ -40,6 +41,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let output = model(batch, &weights, &bias)?;
         println!("Output: {output}");
+
+        let loss = loss::nll(&output, labels)?;
+        println!("Loss: {loss}");
     }
 
     Ok(())
