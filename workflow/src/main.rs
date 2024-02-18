@@ -9,7 +9,10 @@ fn model(
     weights: &Tensor,
     bias: &Tensor,
 ) -> Result<Tensor, Box<dyn std::error::Error>> {
-    Ok(batch.matmul(weights)?.broadcast_add(&bias)?)
+    Ok(log_softmax(
+        &batch.matmul(weights)?.broadcast_add(&bias)?,
+        D::Minus1,
+    )?)
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -18,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::cuda_if_available(0)?;
     let weights = Tensor::rand(0f32, 1f32, (img_size, 10), &device)?;
     let bias = Tensor::zeros((10,), candle_core::DType::F32, &device)?;
-    
+
     let batch_cnt = (img_cnt / BATCH_SIZE) as usize;
     let img_batches = dataset.train_images.chunk(batch_cnt, D::Minus2)?;
     let label_batches = dataset.train_labels.chunk(batch_cnt, D::Minus1)?;
@@ -36,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
 
         let output = model(batch, &weights, &bias)?;
-        println!("Output: {:?}", output);
+        println!("Output: {output}");
     }
 
     Ok(())
