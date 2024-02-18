@@ -1,6 +1,10 @@
 use candle_core::{DType, Device, Tensor};
 use candle_datasets::vision::mnist;
 
+//
+// Implementation of the logistic regression model as shown at
+// https://jonathanweisberg.org/post/A%20Neural%20Network%20from%20Scratch%20-%20Part%201/
+//
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dataset = mnist::load()?;
     let (img_cnt, img_size) = dataset.train_images.shape().dims2()?;
