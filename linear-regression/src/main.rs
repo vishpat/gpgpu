@@ -1,5 +1,5 @@
 extern crate csv;
-use candle_core::{Device, Tensor, D};
+use candle_core::{cuda_backend::cudarc::driver::result::device, Device, Tensor, D};
 use core::panic;
 use std::fs::File;
 
@@ -51,13 +51,24 @@ fn data_labels() -> Result<(Vec<Vec<f32>>, Vec<f32>), Box<dyn std::error::Error>
 
         let label = charges;
         labels.push(label);
-
-        println!(
-            "{age} {:?} {bmi} {children} {:?} {:?} {charges}",
-            gender, smoker, region
-        );
     }
     Ok((features, labels))
+}
+
+fn cost_function(
+    data: &Tensor,
+    labels: &Tensor,
+    cofficients: &Tensor,
+    device: &Device,
+) -> Result<Tensor, Box<dyn std::error::Error>> {
+    let (m, _) = data.shape().dims2()?;
+    let predictions = data.matmul(&cofficients.unsqueeze(1)?)?;
+    let errors = predictions.squeeze(1)?.sub(labels)?;
+    let cost = errors
+        .mul(&errors)?
+        .mean(D::Minus1)?
+        .div(&Tensor::new(2.0 * m as f32, &device)?)?;
+    Ok(cost)
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -67,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let training_size = 5; //(data.len() as f32 * 0.8) as usize;
     let feature_cnt = data[0].len();
 
-    let cofficients = vec![0.0; feature_cnt];
+    let cofficients: Vec<f32> = vec![0.0; feature_cnt];
     let cofficients = Tensor::from_vec(cofficients, (feature_cnt,), &device)?;
     println!("Cofficients {cofficients}");
 
@@ -78,6 +89,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let train_labels = &labels[0..training_size];
     let train_labels = Tensor::from_slice(train_labels, (training_size,), &device)?;
+
+    let cost = cost_function(&train_data, &train_labels, &cofficients, &device)?;
+    println!("Cost {cost}");
 
     let test_data = &data[training_size..];
     let test_labels = &labels[training_size..];
