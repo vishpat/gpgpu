@@ -13,7 +13,9 @@ const NORTHEAST: f32 = 0.2;
 const SOUTHWEST: f32 = 0.3;
 const SOUTHEAST: f32 = 0.4;
 
-fn features_labels() -> Result<(Vec<Vec<f32>>, Vec<f32>), Box<dyn std::error::Error>> {
+const LEARNING_RATE: f32 = 0.01;
+
+fn data_labels() -> Result<(Vec<Vec<f32>>, Vec<f32>), Box<dyn std::error::Error>> {
     let file = File::open("insurance.csv")?;
     let mut rdr = csv::Reader::from_reader(file);
     let mut features: Vec<Vec<f32>> = vec![];
@@ -43,7 +45,7 @@ fn features_labels() -> Result<(Vec<Vec<f32>>, Vec<f32>), Box<dyn std::error::Er
         };
         let charges: f32 = record[6].parse()?;
 
-        let row = vec![age, gender, bmi, children, smoker, region];
+        let row = vec![1.0, age, gender, bmi, children, smoker, region];
         features.push(row);
 
         let label = charges;
@@ -58,13 +60,16 @@ fn features_labels() -> Result<(Vec<Vec<f32>>, Vec<f32>), Box<dyn std::error::Er
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let (features, labels) = features_labels()?;
-    let training_size = (features.len() as f32 * 0.8) as usize;
+    let (data, labels) = data_labels()?;
+    let training_size = (data.len() as f32 * 0.8) as usize;
+    let feature_cnt = data[0].len();
 
-    let train_features = &features[0..training_size];
+    let cofficients = vec![0.0; feature_cnt];
+
+    let train_data = &data[0..training_size];
     let train_labels = &labels[0..training_size];
 
-    let test_features = &features[training_size..];
+    let test_data = &data[training_size..];
     let test_labels = &labels[training_size..];
 
     Ok(())
