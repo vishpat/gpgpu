@@ -1,4 +1,5 @@
 extern crate csv;
+use candle_core::{Device, Tensor, D};
 use core::panic;
 use std::fs::File;
 
@@ -60,14 +61,23 @@ fn data_labels() -> Result<(Vec<Vec<f32>>, Vec<f32>), Box<dyn std::error::Error>
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::cuda_if_available(0)?;
+
     let (data, labels) = data_labels()?;
-    let training_size = (data.len() as f32 * 0.8) as usize;
+    let training_size = 5; //(data.len() as f32 * 0.8) as usize;
     let feature_cnt = data[0].len();
 
     let cofficients = vec![0.0; feature_cnt];
+    let cofficients = Tensor::from_vec(cofficients, (feature_cnt,), &device)?;
+    println!("Cofficients {cofficients}");
 
     let train_data = &data[0..training_size];
+    let train_data = train_data.iter().flatten().copied().collect::<Vec<f32>>();
+    let train_data = Tensor::from_vec(train_data, (training_size, feature_cnt), &device)?;
+    println!("Train Data {train_data}");
+
     let train_labels = &labels[0..training_size];
+    let train_labels = Tensor::from_slice(train_labels, (training_size,), &device)?;
 
     let test_data = &data[training_size..];
     let test_labels = &labels[training_size..];

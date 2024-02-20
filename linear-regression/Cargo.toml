@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 csv = "1.1.6"
 ndarray = "0.15.3"
+candle-core = { git = "https://github.com/huggingface/candle.git", version = "0.3.3", features = ["cuda"] }
