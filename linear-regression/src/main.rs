@@ -96,7 +96,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::cuda_if_available(0)?;
 
     let (data, labels) = data_labels()?;
-    let training_size = 100; //(data.len() as f32 * 0.8) as usize;
+    let training_size = (data.len() as f32 * 0.8) as usize;
     let feature_cnt = data[0].len();
 
     let cofficients: Vec<f32> = vec![0.0; feature_cnt];
