@@ -15,9 +15,9 @@ const SOUTHWEST: f32 = 0.5;
 const SOUTHEAST: f32 = -0.5;
 
 const LEARNING_RATE: f32 = 0.01;
-const ITERATIONS: i32 = 100000;
+const ITERATIONS: i32 = 10000;
 
-fn data_labels() -> Result<(Vec<Vec<f32>>, Vec<f32>), Box<dyn std::error::Error>> {
+fn data_labels() -> Result<(Vec<f32>, Vec<f32>), Box<dyn std::error::Error>> {
     let file = File::open("insurance.csv")?;
     let mut rdr = csv::Reader::from_reader(file);
     let mut features: Vec<Vec<f32>> = vec![];
@@ -53,6 +53,7 @@ fn data_labels() -> Result<(Vec<Vec<f32>>, Vec<f32>), Box<dyn std::error::Error>
         let label = charges;
         labels.push(label);
     }
+    let features = features.iter().flatten().copied().collect::<Vec<f32>>();
     Ok((features, labels))
 }
 
@@ -68,7 +69,7 @@ fn cost_function(
     let cost = errors
         .mul(&errors)?
         .mean(D::Minus1)?
-        .div(&Tensor::new(2.0 * m as f32, &device)?)?;
+        .div(&Tensor::new(2.0 * m as f32, device)?)?;
     Ok(cost)
 }
 
@@ -85,10 +86,10 @@ fn next_cofficients(
         .t()?
         .matmul(&errors.unsqueeze(D::Minus1)?)?
         .unsqueeze(D::Minus1)?
-        .broadcast_div(&Tensor::new(m as f32, &device)?)?;
+        .broadcast_div(&Tensor::new(m as f32, device)?)?;
     let gradient = gradient.squeeze(D::Minus1)?.squeeze(D::Minus1)?;
     let cofficients =
-        cofficients.sub(&gradient.broadcast_mul(&Tensor::new(LEARNING_RATE as f32, &device)?)?)?;
+        cofficients.sub(&gradient.broadcast_mul(&Tensor::new(LEARNING_RATE, device)?)?)?;
     Ok(cofficients)
 }
 
@@ -96,33 +97,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::cuda_if_available(0)?;
 
     let (data, labels) = data_labels()?;
-    let training_size = (data.len() as f32 * 0.8) as usize;
-    let feature_cnt = data[0].len();
+    let training_size = (labels.len() as f32 * 0.8) as usize;
+    let feature_cnt = data.len() / labels.len();
 
     let cofficients: Vec<f32> = vec![0.0; feature_cnt];
     let mut cofficients = Tensor::from_vec(cofficients, (feature_cnt,), &device)?;
 
-    let train_data = &data[0..training_size];
-    let train_data = train_data.iter().flatten().copied().collect::<Vec<f32>>();
-    let train_data = Tensor::from_vec(train_data, (training_size, feature_cnt), &device)?;
+    let train_data = &data[0..training_size*feature_cnt];
+    let train_data = Tensor::from_slice(train_data, (training_size, feature_cnt), &device)?;
 
-    let mut train_labels = &labels[0..training_size];
-    let mut train_labels = Tensor::from_slice(train_labels, (training_size,), &device)?;
+    let train_labels = &labels[0..training_size];
+    let train_labels = Tensor::from_slice(train_labels, (training_size,), &device)?;
 
     let mut cost: Tensor = Tensor::from_slice(&[0.0], (1,), &device)?;
-    for i in 0..ITERATIONS {
+    for _ in 0..ITERATIONS {
         cost = cost_function(&train_data, &train_labels, &cofficients, &device)?;
         cofficients = next_cofficients(&train_data, &train_labels, &cofficients, &device)?;
     }
 
     println!("iterations: {ITERATIONS} cost: {cost}");
 
-    let test_data = &data[training_size..];
-    let test_labels = Tensor::from_slice(&labels[training_size..], (test_data.len(),), &device)?;
-
-    let test_data = test_data.iter().flatten().copied().collect::<Vec<f32>>();
+    let test_data = &data[training_size*feature_cnt..];
     let len = test_data.len();
-    let test_data = Tensor::from_vec(test_data, (len / feature_cnt, feature_cnt), &device)?;
+    let test_labels = Tensor::from_slice(&labels[training_size..], (len/feature_cnt,), &device)?;
+    let test_data = Tensor::from_slice(test_data, (len/feature_cnt, feature_cnt), &device)?;
 
     let cost = cost_function(&test_data, &test_labels, &cofficients, &device)?;
 
