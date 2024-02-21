@@ -1,5 +1,5 @@
 extern crate csv;
-use candle_core::{cuda_backend::cudarc::driver::result::device, Device, Tensor, D};
+use candle_core::{backprop::GradStore, cuda_backend::cudarc::driver::result::device, Device, Tensor, D};
 use core::panic;
 use std::fs::File;
 
@@ -14,7 +14,8 @@ const NORTHEAST: f32 = 0.2;
 const SOUTHWEST: f32 = 0.3;
 const SOUTHEAST: f32 = 0.4;
 
-const LEARNING_RATE: f32 = 0.01;
+const LEARNING_RATE: f32 = 0.1;
+const ITERATIONS: i32 = 100000;
 
 fn data_labels() -> Result<(Vec<Vec<f32>>, Vec<f32>), Box<dyn std::error::Error>> {
     let file = File::open("insurance.csv")?;
@@ -71,27 +72,49 @@ fn cost_function(
     Ok(cost)
 }
 
+fn next_cofficients(
+    data: &Tensor,
+    labels: &Tensor,
+    cofficients: &Tensor,
+    device: &Device,
+) -> Result<Tensor, Box<dyn std::error::Error>> {
+    let (m, _) = data.shape().dims2()?;
+    let predictions = data.matmul(&cofficients.unsqueeze(1)?)?;
+    let errors = predictions.squeeze(1)?.sub(labels)?;
+    let gradient = data
+        .t()?
+        .matmul(&errors.unsqueeze(D::Minus1)?)?.unsqueeze(D::Minus1)?
+        .broadcast_div(&Tensor::new(m as f32, &device)?)?;
+    let gradient = gradient.squeeze(D::Minus1)?.squeeze(D::Minus1)?;
+    let cofficients =
+        cofficients.sub(&gradient.broadcast_mul(&Tensor::new(LEARNING_RATE as f32, &device)?)?)?;
+    Ok(cofficients)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::cuda_if_available(0)?;
 
     let (data, labels) = data_labels()?;
-    let training_size = 5; //(data.len() as f32 * 0.8) as usize;
+    let training_size = 100; //(data.len() as f32 * 0.8) as usize;
     let feature_cnt = data[0].len();
 
     let cofficients: Vec<f32> = vec![0.0; feature_cnt];
-    let cofficients = Tensor::from_vec(cofficients, (feature_cnt,), &device)?;
-    println!("Cofficients {cofficients}");
+    let mut cofficients = Tensor::from_vec(cofficients, (feature_cnt,), &device)?;
 
     let train_data = &data[0..training_size];
     let train_data = train_data.iter().flatten().copied().collect::<Vec<f32>>();
     let train_data = Tensor::from_vec(train_data, (training_size, feature_cnt), &device)?;
-    println!("Train Data {train_data}");
 
     let train_labels = &labels[0..training_size];
     let train_labels = Tensor::from_slice(train_labels, (training_size,), &device)?;
 
-    let cost = cost_function(&train_data, &train_labels, &cofficients, &device)?;
-    println!("Cost {cost}");
+    let mut cost: Tensor = Tensor::from_slice(&[0.0],(1,), &device)?;
+    for i in 0..ITERATIONS {
+        cost = cost_function(&train_data, &train_labels, &cofficients, &device)?;
+        cofficients = next_cofficients(&train_data, &train_labels, &cofficients, &device)?;
+    }
+
+    println!("iterations: {ITERATIONS} cost: {cost}" );
 
     let test_data = &data[training_size..];
     let test_labels = &labels[training_size..];
