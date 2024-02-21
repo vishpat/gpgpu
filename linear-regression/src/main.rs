@@ -3,16 +3,16 @@ use candle_core::{Device, Tensor, D};
 use core::panic;
 use std::fs::File;
 
-const MALE: f32 = 0.0;
-const FEMALE: f32 = 1.0;
+const MALE: f32 = 0.5;
+const FEMALE: f32 = -0.5;
 
-const YES: f32 = 1.0;
-const NO: f32 = 0.0;
+const YES: f32 = 0.5;
+const NO: f32 = -0.5;
 
-const NORTHWEST: f32 = 0.1;
-const NORTHEAST: f32 = 0.2;
-const SOUTHWEST: f32 = 0.3;
-const SOUTHEAST: f32 = 0.4;
+const NORTHWEST: f32 = 0.25;
+const NORTHEAST: f32 = -0.25;
+const SOUTHWEST: f32 = 0.5;
+const SOUTHEAST: f32 = -0.5;
 
 const LEARNING_RATE: f32 = 0.01;
 const ITERATIONS: i32 = 100000;
@@ -83,7 +83,8 @@ fn next_cofficients(
     let errors = predictions.squeeze(1)?.sub(labels)?;
     let gradient = data
         .t()?
-        .matmul(&errors.unsqueeze(D::Minus1)?)?.unsqueeze(D::Minus1)?
+        .matmul(&errors.unsqueeze(D::Minus1)?)?
+        .unsqueeze(D::Minus1)?
         .broadcast_div(&Tensor::new(m as f32, &device)?)?;
     let gradient = gradient.squeeze(D::Minus1)?.squeeze(D::Minus1)?;
     let cofficients =
@@ -105,19 +106,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let train_data = train_data.iter().flatten().copied().collect::<Vec<f32>>();
     let train_data = Tensor::from_vec(train_data, (training_size, feature_cnt), &device)?;
 
-    let train_labels = &labels[0..training_size];
-    let train_labels = Tensor::from_slice(train_labels, (training_size,), &device)?;
+    let mut train_labels = &labels[0..training_size];
+    let mut train_labels = Tensor::from_slice(train_labels, (training_size,), &device)?;
 
-    let mut cost: Tensor = Tensor::from_slice(&[0.0],(1,), &device)?;
+    let mut cost: Tensor = Tensor::from_slice(&[0.0], (1,), &device)?;
     for i in 0..ITERATIONS {
         cost = cost_function(&train_data, &train_labels, &cofficients, &device)?;
         cofficients = next_cofficients(&train_data, &train_labels, &cofficients, &device)?;
     }
 
-    println!("iterations: {ITERATIONS} cost: {cost}" );
+    println!("iterations: {ITERATIONS} cost: {cost}");
 
     let test_data = &data[training_size..];
-    let test_labels = &labels[training_size..];
+    let test_labels = Tensor::from_slice(&labels[training_size..], (test_data.len(),), &device)?;
 
+    let test_data = test_data.iter().flatten().copied().collect::<Vec<f32>>();
+    let len = test_data.len();
+    let test_data = Tensor::from_vec(test_data, (len / feature_cnt, feature_cnt), &device)?;
+
+    let cost = cost_function(&test_data, &test_labels, &cofficients, &device)?;
+
+    println!("Test data Cost = {cost}");
     Ok(())
 }
