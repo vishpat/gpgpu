@@ -1,5 +1,5 @@
 extern crate csv;
-use candle_core::{backprop::GradStore, cuda_backend::cudarc::driver::result::device, Device, Tensor, D};
+use candle_core::{Device, Tensor, D};
 use core::panic;
 use std::fs::File;
 
@@ -14,7 +14,7 @@ const NORTHEAST: f32 = 0.2;
 const SOUTHWEST: f32 = 0.3;
 const SOUTHEAST: f32 = 0.4;
 
-const LEARNING_RATE: f32 = 0.1;
+const LEARNING_RATE: f32 = 0.01;
 const ITERATIONS: i32 = 100000;
 
 fn data_labels() -> Result<(Vec<Vec<f32>>, Vec<f32>), Box<dyn std::error::Error>> {
