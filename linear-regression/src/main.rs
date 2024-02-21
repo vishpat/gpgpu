@@ -60,38 +60,40 @@ fn data_labels() -> Result<(Vec<f32>, Vec<f32>), Box<dyn std::error::Error>> {
 fn cost_function(
     data: &Tensor,
     labels: &Tensor,
-    cofficients: &Tensor,
+    thetas: &Tensor,
     device: &Device,
 ) -> Result<Tensor, Box<dyn std::error::Error>> {
     let (m, _) = data.shape().dims2()?;
-    let predictions = data.matmul(&cofficients.unsqueeze(1)?)?;
-    let errors = predictions.squeeze(1)?.sub(labels)?;
-    let cost = errors
-        .mul(&errors)?
+    let predictions = data.matmul(&thetas.unsqueeze(1)?)?;
+    let deltas = predictions.squeeze(1)?.sub(labels)?;
+    let cost = deltas
+        .mul(&deltas)?
         .mean(D::Minus1)?
         .div(&Tensor::new(2.0 * m as f32, device)?)?;
     Ok(cost)
 }
 
-fn next_cofficients(
+fn next_thetas(
     data: &Tensor,
     labels: &Tensor,
-    cofficients: &Tensor,
+    thetas: &Tensor,
     device: &Device,
 ) -> Result<Tensor, Box<dyn std::error::Error>> {
     let (m, _) = data.shape().dims2()?;
-    let predictions = data.matmul(&cofficients.unsqueeze(1)?)?;
-    let errors = predictions.squeeze(1)?.sub(labels)?;
+    let predictions = data.matmul(&thetas.unsqueeze(1)?)?;
+    let deltas = predictions.squeeze(1)?.sub(labels)?;
     let gradient = data
         .t()?
-        .matmul(&errors.unsqueeze(D::Minus1)?)?
+        .matmul(&deltas.unsqueeze(D::Minus1)?)?
         .unsqueeze(D::Minus1)?
         .broadcast_div(&Tensor::new(m as f32, device)?)?;
     let gradient = gradient.squeeze(D::Minus1)?.squeeze(D::Minus1)?;
-    let cofficients =
-        cofficients.sub(&gradient.broadcast_mul(&Tensor::new(LEARNING_RATE, device)?)?)?;
-    Ok(cofficients)
+    let thetas =
+        thetas.sub(&gradient.broadcast_mul(&Tensor::new(LEARNING_RATE, device)?)?)?;
+    Ok(thetas)
 }
+
+// https://www.youtube.com/watch?v=UVCFaaEBnTE
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::cuda_if_available(0)?;
@@ -100,8 +102,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let training_size = (labels.len() as f32 * 0.8) as usize;
     let feature_cnt = data.len() / labels.len();
 
-    let cofficients: Vec<f32> = vec![0.0; feature_cnt];
-    let mut cofficients = Tensor::from_vec(cofficients, (feature_cnt,), &device)?;
+    let thetas: Vec<f32> = vec![0.0; feature_cnt];
+    let mut thetas = Tensor::from_vec(thetas, (feature_cnt,), &device)?;
 
     let train_data = &data[0..training_size*feature_cnt];
     let train_data = Tensor::from_slice(train_data, (training_size, feature_cnt), &device)?;
@@ -111,8 +113,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut cost: Tensor = Tensor::from_slice(&[0.0], (1,), &device)?;
     for _ in 0..ITERATIONS {
-        cost = cost_function(&train_data, &train_labels, &cofficients, &device)?;
-        cofficients = next_cofficients(&train_data, &train_labels, &cofficients, &device)?;
+        cost = cost_function(&train_data, &train_labels, &thetas, &device)?;
+        thetas = next_thetas(&train_data, &train_labels, &thetas, &device)?;
     }
 
     println!("iterations: {ITERATIONS} cost: {cost}");
@@ -122,7 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let test_labels = Tensor::from_slice(&labels[training_size..], (len/feature_cnt,), &device)?;
     let test_data = Tensor::from_slice(test_data, (len/feature_cnt, feature_cnt), &device)?;
 
-    let cost = cost_function(&test_data, &test_labels, &cofficients, &device)?;
+    let cost = cost_function(&test_data, &test_labels, &thetas, &device)?;
 
     println!("Test data Cost = {cost}");
     Ok(())
