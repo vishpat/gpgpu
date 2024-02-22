@@ -15,9 +15,11 @@ const SOUTHWEST: f32 = 0.5;
 const SOUTHEAST: f32 = -0.5;
 
 const LEARNING_RATE: f32 = 0.01;
-const ITERATIONS: i32 = 10000;
+const ITERATIONS: i32 = 100000;
 
 fn data_labels() -> Result<(Vec<f32>, Vec<f32>), Box<dyn std::error::Error>> {
+    // https://www.kaggle.com/mirichoi0218/insurance
+
     let file = File::open("insurance.csv")?;
     let mut rdr = csv::Reader::from_reader(file);
     let mut features: Vec<Vec<f32>> = vec![];
@@ -88,9 +90,22 @@ fn next_thetas(
         .unsqueeze(D::Minus1)?
         .broadcast_div(&Tensor::new(m as f32, device)?)?;
     let gradient = gradient.squeeze(D::Minus1)?.squeeze(D::Minus1)?;
-    let thetas =
-        thetas.sub(&gradient.broadcast_mul(&Tensor::new(LEARNING_RATE, device)?)?)?;
+    let thetas = thetas.sub(&gradient.broadcast_mul(&Tensor::new(LEARNING_RATE, device)?)?)?;
     Ok(thetas)
+}
+
+fn r2_score(predictions: &Tensor, labels: &Tensor) -> Result<f32, Box<dyn std::error::Error>> {
+    let mean = labels.mean(D::Minus1)?;
+
+    let rss = labels.sub(&predictions)?;
+    let rss = rss.mul(&rss)?.sum(D::Minus1)?;
+
+    let sst = labels.broadcast_sub(&mean)?;
+    let sst = sst.mul(&sst)?.sum(D::Minus1)?;
+
+    let tmp = rss.div(&sst)?.to_scalar::<f32>()?;
+
+    Ok(1.0 - tmp)
 }
 
 // https://www.youtube.com/watch?v=UVCFaaEBnTE
@@ -105,7 +120,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let thetas: Vec<f32> = vec![0.0; feature_cnt];
     let mut thetas = Tensor::from_vec(thetas, (feature_cnt,), &device)?;
 
-    let train_data = &data[0..training_size*feature_cnt];
+    let train_data = &data[0..training_size * feature_cnt];
     let train_data = Tensor::from_slice(train_data, (training_size, feature_cnt), &device)?;
 
     let train_labels = &labels[0..training_size];
@@ -117,15 +132,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thetas = next_thetas(&train_data, &train_labels, &thetas, &device)?;
     }
 
-    println!("iterations: {ITERATIONS} cost: {cost}");
-
-    let test_data = &data[training_size*feature_cnt..];
+    let test_data = &data[training_size * feature_cnt..];
     let len = test_data.len();
-    let test_labels = Tensor::from_slice(&labels[training_size..], (len/feature_cnt,), &device)?;
-    let test_data = Tensor::from_slice(test_data, (len/feature_cnt, feature_cnt), &device)?;
+    let test_labels = Tensor::from_slice(&labels[training_size..], (len / feature_cnt,), &device)?;
+    let test_data = Tensor::from_slice(test_data, (len / feature_cnt, feature_cnt), &device)?;
 
-    let cost = cost_function(&test_data, &test_labels, &thetas, &device)?;
+    let predictions = test_data.matmul(&thetas.unsqueeze(1)?)?.squeeze(1)?;
+    let r2 = r2_score(&predictions, &test_labels)?;
+    println!("r2: {r2}");
 
-    println!("Test data Cost = {cost}");
     Ok(())
 }
