@@ -11,7 +11,7 @@ pub struct LinearRegression {
 impl LinearRegression {
     pub fn new(feature_cnt: usize, gpu: bool) -> Result<Self> {
         let device = if gpu {
-            Device::cuda_if_available(0).unwrap()
+            Device::cuda_if_available(0)?
         } else {
             Device::Cpu
         };
