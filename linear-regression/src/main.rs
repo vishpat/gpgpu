@@ -9,7 +9,7 @@ use std::rc::Rc;
 const LEARNING_RATE: f32 = 0.01;
 const ITERATIONS: i32 = 100000;
 
-fn insurance_data_labels(device: &Device) -> Result<Dataset> {
+fn insurance_dataset(device: &Device) -> Result<Dataset> {
     // https://www.kaggle.com/mirichoi0218/insurance
 
     let file = File::open("insurance.csv")?;
@@ -94,7 +94,7 @@ fn insurance_data_labels(device: &Device) -> Result<Dataset> {
 fn main() -> Result<()> {
     let device = Rc::new(Device::cuda_if_available(0)?);
 
-    let dataset = insurance_data_labels(&device)?;
+    let dataset = insurance_dataset(&device)?;
 
     let mut model = LinearRegression::new(dataset.feature_cnt, device)?;
 
