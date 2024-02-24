@@ -97,7 +97,7 @@ fn next_thetas(
 fn r2_score(predictions: &Tensor, labels: &Tensor) -> Result<f32, Box<dyn std::error::Error>> {
     let mean = labels.mean(D::Minus1)?;
 
-    let rss = labels.sub(&predictions)?;
+    let rss = labels.sub(predictions)?;
     let rss = rss.mul(&rss)?.sum(D::Minus1)?;
 
     let sst = labels.broadcast_sub(&mean)?;
