@@ -91,7 +91,7 @@ fn insurance_data_labels(device: &Device) -> Result<Dataset> {
     })
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let device = Rc::new(Device::cuda_if_available(0)?);
 
     let dataset = insurance_data_labels(&device)?;
@@ -107,7 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let predictions = model.predict(&dataset.test_data)?;
-    let r2 = r2_score(&predictions, &dataset.test_labels)?;
+    let r2 = r2_score(&predictions, &dataset.test_labels).unwrap();
     println!("r2: {r2}");
 
     Ok(())
