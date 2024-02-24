@@ -3,13 +3,13 @@ use candle_core::{Device, Tensor, D};
 
 // Implement Linear Regression model using Gradient Descent
 // https://www.youtube.com/watch?v=UVCFaaEBnTE
-struct LinearRegression {
+pub struct LinearRegression {
     thetas: Tensor,
     device: Device,
 }
 
 impl LinearRegression {
-    fn new(&self, feature_cnt: usize, gpu: bool) -> Result<Self> {
+    pub fn new(feature_cnt: usize, gpu: bool) -> Result<Self> {
         let device = if gpu {
             Device::cuda_if_available(0).unwrap()
         } else {
@@ -20,11 +20,11 @@ impl LinearRegression {
         Ok(Self { thetas, device })
     }
 
-    fn predict(&self, x: &Tensor) -> Result<Tensor> {
+    pub fn predict(&self, x: &Tensor) -> Result<Tensor> {
         Ok(x.matmul(&self.thetas.unsqueeze(1)?)?.squeeze(1)?)
     }
 
-    fn cost(&self, x: &Tensor, y: &Tensor) -> Result<Tensor> {
+    pub fn cost(&self, x: &Tensor, y: &Tensor) -> Result<Tensor> {
         let m = y.shape().dims1()?;
         let predictions = self.predict(x)?;
         let deltas = predictions.sub(y)?;
@@ -35,7 +35,7 @@ impl LinearRegression {
         Ok(cost)
     }
 
-    fn train(&mut self, x: &Tensor, y: &Tensor, learning_rate: f32) -> Result<()> {
+    pub fn train(&mut self, x: &Tensor, y: &Tensor, learning_rate: f32) -> Result<()> {
         let m = y.shape().dims1()?;
         let predictions = self.predict(x)?;
         let deltas = predictions.sub(y)?;
@@ -51,11 +51,7 @@ impl LinearRegression {
     }
 }
 
-fn r2_score(
-    self,
-    predictions: &Tensor,
-    labels: &Tensor,
-) -> Result<f32, Box<dyn std::error::Error>> {
+pub fn r2_score(predictions: &Tensor, labels: &Tensor) -> Result<f32, Box<dyn std::error::Error>> {
     let mean = labels.mean(D::Minus1)?;
 
     let rss = labels.sub(predictions)?;

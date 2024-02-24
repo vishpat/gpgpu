@@ -1,6 +1,7 @@
 extern crate csv;
-use candle_core::{Device, Tensor, D};
+use candle_core::{Device, Tensor};
 use core::panic;
+use linear_regression::{r2_score, LinearRegression};
 use std::fs::File;
 
 const MALE: f32 = 0.5;
@@ -59,55 +60,6 @@ fn data_labels() -> Result<(Vec<f32>, Vec<f32>), Box<dyn std::error::Error>> {
     Ok((features, labels))
 }
 
-fn cost_function(
-    data: &Tensor,
-    labels: &Tensor,
-    thetas: &Tensor,
-    device: &Device,
-) -> Result<Tensor, Box<dyn std::error::Error>> {
-    let (m, _) = data.shape().dims2()?;
-    let predictions = data.matmul(&thetas.unsqueeze(1)?)?;
-    let deltas = predictions.squeeze(1)?.sub(labels)?;
-    let cost = deltas
-        .mul(&deltas)?
-        .mean(D::Minus1)?
-        .div(&Tensor::new(2.0 * m as f32, device)?)?;
-    Ok(cost)
-}
-
-fn next_thetas(
-    data: &Tensor,
-    labels: &Tensor,
-    thetas: &Tensor,
-    device: &Device,
-) -> Result<Tensor, Box<dyn std::error::Error>> {
-    let (m, _) = data.shape().dims2()?;
-    let predictions = data.matmul(&thetas.unsqueeze(1)?)?;
-    let deltas = predictions.squeeze(1)?.sub(labels)?;
-    let gradient = data
-        .t()?
-        .matmul(&deltas.unsqueeze(D::Minus1)?)?
-        .unsqueeze(D::Minus1)?
-        .broadcast_div(&Tensor::new(m as f32, device)?)?;
-    let gradient = gradient.squeeze(D::Minus1)?.squeeze(D::Minus1)?;
-    let thetas = thetas.sub(&gradient.broadcast_mul(&Tensor::new(LEARNING_RATE, device)?)?)?;
-    Ok(thetas)
-}
-
-fn r2_score(predictions: &Tensor, labels: &Tensor) -> Result<f32, Box<dyn std::error::Error>> {
-    let mean = labels.mean(D::Minus1)?;
-
-    let rss = labels.sub(predictions)?;
-    let rss = rss.mul(&rss)?.sum(D::Minus1)?;
-
-    let sst = labels.broadcast_sub(&mean)?;
-    let sst = sst.mul(&sst)?.sum(D::Minus1)?;
-
-    let tmp = rss.div(&sst)?.to_scalar::<f32>()?;
-
-    Ok(1.0 - tmp)
-}
-
 // https://www.youtube.com/watch?v=UVCFaaEBnTE
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -117,19 +69,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let training_size = (labels.len() as f32 * 0.8) as usize;
     let feature_cnt = data.len() / labels.len();
 
-    let thetas: Vec<f32> = vec![0.0; feature_cnt];
-    let mut thetas = Tensor::from_vec(thetas, (feature_cnt,), &device)?;
-
     let train_data = &data[0..training_size * feature_cnt];
     let train_data = Tensor::from_slice(train_data, (training_size, feature_cnt), &device)?;
 
     let train_labels = &labels[0..training_size];
     let train_labels = Tensor::from_slice(train_labels, (training_size,), &device)?;
 
-    let mut cost: Tensor = Tensor::from_slice(&[0.0], (1,), &device)?;
+    let mut model = LinearRegression::new(feature_cnt, true)?;
+
     for _ in 0..ITERATIONS {
-        cost = cost_function(&train_data, &train_labels, &thetas, &device)?;
-        thetas = next_thetas(&train_data, &train_labels, &thetas, &device)?;
+        model.train(&train_data, &train_labels, LEARNING_RATE)?;
     }
 
     let test_data = &data[training_size * feature_cnt..];
@@ -137,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let test_labels = Tensor::from_slice(&labels[training_size..], (len / feature_cnt,), &device)?;
     let test_data = Tensor::from_slice(test_data, (len / feature_cnt, feature_cnt), &device)?;
 
-    let predictions = test_data.matmul(&thetas.unsqueeze(1)?)?.squeeze(1)?;
+    let predictions = model.predict(&test_data)?;
     let r2 = r2_score(&predictions, &test_labels)?;
     println!("r2: {r2}");
 
