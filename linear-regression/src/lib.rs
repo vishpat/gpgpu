@@ -1,20 +1,24 @@
 use anyhow::Result;
 use candle_core::{Device, Tensor, D};
+use std::rc::Rc;
+
+pub struct Dataset {
+    pub training_data: Tensor,
+    pub training_labels: Tensor,
+    pub test_data: Tensor,
+    pub test_labels: Tensor,
+    pub feature_cnt: usize,
+}
 
 // Implement Linear Regression model using Gradient Descent
 // https://www.youtube.com/watch?v=UVCFaaEBnTE
 pub struct LinearRegression {
     thetas: Tensor,
-    device: Device,
+    device: Rc<Device>,
 }
 
 impl LinearRegression {
-    pub fn new(feature_cnt: usize, gpu: bool) -> Result<Self> {
-        let device = if gpu {
-            Device::cuda_if_available(0)?
-        } else {
-            Device::Cpu
-        };
+    pub fn new(feature_cnt: usize, device: Rc<Device>) -> Result<Self> {
         let thetas: Vec<f32> = vec![0.0; feature_cnt];
         let thetas = Tensor::from_vec(thetas, (feature_cnt,), &device)?;
         Ok(Self { thetas, device })

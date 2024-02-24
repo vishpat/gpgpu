@@ -1,30 +1,33 @@
 extern crate csv;
+use anyhow::Result;
 use candle_core::{Device, Tensor};
 use core::panic;
-use linear_regression::{r2_score, LinearRegression};
+use linear_regression::{r2_score, Dataset, LinearRegression};
 use std::fs::File;
-
-const MALE: f32 = 0.5;
-const FEMALE: f32 = -0.5;
-
-const YES: f32 = 0.5;
-const NO: f32 = -0.5;
-
-const NORTHWEST: f32 = 0.25;
-const NORTHEAST: f32 = -0.25;
-const SOUTHWEST: f32 = 0.5;
-const SOUTHEAST: f32 = -0.5;
+use std::rc::Rc;
 
 const LEARNING_RATE: f32 = 0.01;
 const ITERATIONS: i32 = 100000;
 
-fn data_labels() -> Result<(Vec<f32>, Vec<f32>), Box<dyn std::error::Error>> {
+fn insurance_data_labels(device: &Device) -> Result<Dataset> {
     // https://www.kaggle.com/mirichoi0218/insurance
 
     let file = File::open("insurance.csv")?;
     let mut rdr = csv::Reader::from_reader(file);
-    let mut features: Vec<Vec<f32>> = vec![];
+    let mut data: Vec<Vec<f32>> = vec![];
     let mut labels: Vec<f32> = vec![];
+
+    const FEATURE_CNT: usize = 7;
+    const MALE: f32 = 0.5;
+    const FEMALE: f32 = -0.5;
+
+    const YES: f32 = 0.5;
+    const NO: f32 = -0.5;
+
+    const NORTHWEST: f32 = 0.25;
+    const NORTHEAST: f32 = -0.25;
+    const SOUTHWEST: f32 = 0.5;
+    const SOUTHEAST: f32 = -0.5;
 
     for result in rdr.records() {
         let record = result?;
@@ -50,44 +53,61 @@ fn data_labels() -> Result<(Vec<f32>, Vec<f32>), Box<dyn std::error::Error>> {
         };
         let charges: f32 = record[6].parse()?;
 
+        // IMPORTANT: The first column of the row needs to be 1.0 for the bias term
         let row = vec![1.0, age, gender, bmi, children, smoker, region];
-        features.push(row);
+        data.push(row);
 
         let label = charges;
         labels.push(label);
     }
-    let features = features.iter().flatten().copied().collect::<Vec<f32>>();
-    Ok((features, labels))
+    let training_size = labels.len() * 8 / 10;
+    let training_data = data[..training_size].to_vec();
+    let training_labels = labels[..training_size].to_vec();
+
+    let training_data = training_data
+        .iter()
+        .flatten()
+        .copied()
+        .collect::<Vec<f32>>();
+    let training_data_tensor =
+        Tensor::from_slice(&training_data, (training_labels.len(), FEATURE_CNT), device)?;
+    let training_labels_tensor =
+        Tensor::from_slice(&training_labels, (training_labels.len(),), device)?;
+
+    let test_data = data[training_size..].to_vec();
+    let test_labels = labels[training_size..].to_vec();
+
+    let test_data = test_data.iter().flatten().copied().collect::<Vec<f32>>();
+    let test_data_tensor =
+        Tensor::from_slice(&test_data, (test_labels.len(), FEATURE_CNT), device)?;
+    let test_labels_tensor = Tensor::from_slice(&test_labels, (test_labels.len(),), device)?;
+
+    Ok(Dataset {
+        training_data: training_data_tensor,
+        training_labels: training_labels_tensor,
+        test_data: test_data_tensor,
+        test_labels: test_labels_tensor,
+        feature_cnt: FEATURE_CNT,
+    })
 }
 
-// https://www.youtube.com/watch?v=UVCFaaEBnTE
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let device = Device::cuda_if_available(0)?;
+    let device = Rc::new(Device::cuda_if_available(0)?);
 
-    let (data, labels) = data_labels()?;
-    let training_size = (labels.len() as f32 * 0.8) as usize;
-    let feature_cnt = data.len() / labels.len();
+    let dataset = insurance_data_labels(&device)?;
 
-    let train_data = &data[0..training_size * feature_cnt];
-    let train_data = Tensor::from_slice(train_data, (training_size, feature_cnt), &device)?;
-
-    let train_labels = &labels[0..training_size];
-    let train_labels = Tensor::from_slice(train_labels, (training_size,), &device)?;
-
-    let mut model = LinearRegression::new(feature_cnt, true)?;
+    let mut model = LinearRegression::new(dataset.feature_cnt, device)?;
 
     for _ in 0..ITERATIONS {
-        model.train(&train_data, &train_labels, LEARNING_RATE)?;
+        model.train(
+            &dataset.training_data,
+            &dataset.training_labels,
+            LEARNING_RATE,
+        )?;
     }
 
-    let test_data = &data[training_size * feature_cnt..];
-    let len = test_data.len();
-    let test_labels = Tensor::from_slice(&labels[training_size..], (len / feature_cnt,), &device)?;
-    let test_data = Tensor::from_slice(test_data, (len / feature_cnt, feature_cnt), &device)?;
-
-    let predictions = model.predict(&test_data)?;
-    let r2 = r2_score(&predictions, &test_labels)?;
+    let predictions = model.predict(&dataset.test_data)?;
+    let r2 = r2_score(&predictions, &dataset.test_labels)?;
     println!("r2: {r2}");
 
     Ok(())
