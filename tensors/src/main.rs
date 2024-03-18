@@ -1,5 +1,28 @@
-use candle_core::{DType, Device, Tensor};
+use candle_core::{DType, Device, Tensor, D};
 use ndarray::array;
+
+fn cdist(x1: &Tensor, x2: &Tensor) -> Result<Tensor, Box<dyn std::error::Error>> {
+    let dim1 = x1.shape().dims2()?;
+    let x1 = x1.unsqueeze(0)?;
+
+    let dim2 = x2.shape().dims2()?;
+    let x2 = x2.unsqueeze(1)?;
+    Ok(x1
+        .broadcast_sub(&x2)?
+        .sqr()?
+        .sum(D::Minus1)?
+        .sqrt()?
+        .transpose(D::Minus1, D::Minus2)?)
+}
+
+fn zscore_normalize(data: &Tensor) -> Result<Tensor, Box<dyn std::error::Error>> {
+    let mean = data.mean(0)?;
+    let squared_diff = data.broadcast_sub(&mean)?.sqr()?;
+    let variance = squared_diff.mean(0)?;
+    let std_dev = variance.sqrt()?;
+    let normalized = data.broadcast_sub(&mean)?.broadcast_div(&std_dev)?;
+    Ok(normalized)
+}
 
 #[allow(dead_code)]
 fn scalar() -> Result<(), Box<dyn std::error::Error>> {
@@ -133,13 +156,13 @@ fn broadcast_mul() -> Result<(), Box<dyn std::error::Error>> {
 fn indexing() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::new_cuda(0)?;
 
-    let rand_tensor = Tensor::rand(0f32, 1., (2, 2, 2), &device)?;
+    let rand_tensor = Tensor::rand(0f32, 1., (20, 1), &device)?;
     println!("Tensor {rand_tensor}");
 
-    let index_tensor = Tensor::new(&[0u32], &device)?;
+    let index_tensor = Tensor::new(&[0u32, 3u32], &device)?;
     println!("Index tensor {index_tensor}");
 
-    let selected = rand_tensor.index_select(&index_tensor, 2)?;
+    let selected = rand_tensor.index_select(&index_tensor, 0)?;
     println!("Selected tensor {selected}");
     Ok(())
 }
@@ -166,7 +189,36 @@ fn argmax() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[allow(dead_code)]
+fn cdist_test() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let data1 = vec![0.9041, 0.0196, -0.3108, -2.4423, -0.4821, 1.059];
+    let tensor1 = Tensor::from_slice(&data1, (3, 2), &device)?;
+
+    let data2 = vec![-2.1763, -0.4713, -0.6986, 1.3702];
+    let tensor2 = Tensor::from_slice(&data2, (2, 2), &device)?;
+
+    let tensor = cdist(&tensor1, &tensor2)?;
+    println!("Tensor {tensor}");
+
+    Ok(())
+}
+
+#[allow(dead_code)]
+fn zscore_normalize_test() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let data = vec![3., 2., 15., 6., 0., 10., 1., 18.];
+    let tensor = Tensor::from_slice(&data, (4, 2), &device)?;
+    println!("Tensor {tensor}");
+    let tensor = zscore_normalize(&tensor)?;
+    println!("Normalized Tensor {tensor}");
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    argmax()?;
+    zscore_normalize_test()?;
     Ok(())
 }
