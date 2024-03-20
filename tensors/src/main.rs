@@ -24,6 +24,17 @@ fn zscore_normalize(data: &Tensor) -> Result<Tensor, Box<dyn std::error::Error>>
     Ok(normalized)
 }
 
+fn cov(data: &Tensor, device: &Device) -> Result<Tensor, Box<dyn std::error::Error>> {
+    let mean = data.mean(0)?;
+    let centered = data.broadcast_sub(&mean)?;
+    let (m, n) = data.shape().dims2()?;
+    let cov = centered
+        .transpose(D::Minus1, D::Minus2)?
+        .matmul(&centered)?
+        .broadcast_div(&Tensor::new(m as f64, device)?)?;
+    Ok(cov)
+}
+
 #[allow(dead_code)]
 fn scalar() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::new_cuda(0)?;
@@ -218,7 +229,24 @@ fn zscore_normalize_test() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[allow(dead_code)]
+fn cov_test() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let data = vec![0., 2., 1., 1., 2., 0.];
+    let tensor = Tensor::from_slice(&data, (3, 2), &device)?;
+    let tensor = cov(&tensor, &device)?;
+    println!("Cov Tensor {tensor}");
+
+    let data = vec![68., 29., 60., 26., 58., 30., 40., 35.];
+    let tensor = Tensor::from_slice(&data, (4, 2), &device)?;
+    let tensor = cov(&tensor, &device)?;
+    println!("Cov Tensor {tensor}");
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    zscore_normalize_test()?;
+    cov_test()?;
     Ok(())
 }
