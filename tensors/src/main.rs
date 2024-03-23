@@ -246,7 +246,25 @@ fn cov_test() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+
+#[allow(dead_code)]
+fn variance_test() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let data = vec![2., 4., 6., 1., 3., 5., 3., 6., 9., 4., 8., 12.];
+    let data = Tensor::from_slice(&data, (4, 3), &device)?;
+    println!("Data {data}");
+
+    let mean = data.mean(0)?;
+    println!("Mean {mean}");
+
+    let variance = data.broadcast_sub(&mean)?.sqr()?.mean(0)?;
+    println!("Variance {variance}");
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    cov_test()?;
+    variance_test()?;
     Ok(())
 }
