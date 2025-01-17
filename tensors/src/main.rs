@@ -246,6 +246,35 @@ fn cov_test() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[allow(dead_code)]
+fn r_square_test() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let y_true = vec![3., -0.5, 2., 7.];
+    let y_pred = vec![2.5, 0.0, 2., 8.];
+
+    let y_true = Tensor::from_slice(&y_true, (4,), &device)?;
+    let y_pred = Tensor::from_slice(&y_pred, (4,), &device)?;
+
+    let y_mean = y_true.mean(0).unwrap();
+    let ss_tot = y_true
+        .broadcast_sub(&y_mean)
+        .unwrap()
+        .sqr()
+        .unwrap()
+        .sum(D::Minus1)
+        .unwrap();
+    let ss_res = y_true
+        .broadcast_sub(&y_pred)
+        .unwrap()
+        .sqr()
+        .unwrap()
+        .sum(D::Minus1)
+        .unwrap();
+    let r_square = ss_res.broadcast_div(&ss_tot).unwrap();
+    println!("R Square: {:?}", r_square);
+    Ok(())
+}
 
 #[allow(dead_code)]
 fn variance_test() -> Result<(), Box<dyn std::error::Error>> {
