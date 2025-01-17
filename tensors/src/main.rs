@@ -31,7 +31,7 @@ fn cov(data: &Tensor, device: &Device) -> Result<Tensor, Box<dyn std::error::Err
     let cov = centered
         .transpose(D::Minus1, D::Minus2)?
         .matmul(&centered)?
-        .broadcast_div(&Tensor::new(m as f64, device)?)?;
+        .broadcast_div(&Tensor::new((m - 1) as f64, device)?)?;
     Ok(cov)
 }
 
@@ -233,19 +233,26 @@ fn zscore_normalize_test() -> Result<(), Box<dyn std::error::Error>> {
 fn cov_test() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::new_cuda(0)?;
 
-    let data = vec![0., 2., 1., 1., 2., 0.];
+    let data = vec![80., 70., 63., 20., 100., 50.];
     let tensor = Tensor::from_slice(&data, (3, 2), &device)?;
+    println!("Tensor {tensor}");
     let tensor = cov(&tensor, &device)?;
     println!("Cov Tensor {tensor}");
 
     let data = vec![68., 29., 60., 26., 58., 30., 40., 35.];
     let tensor = Tensor::from_slice(&data, (4, 2), &device)?;
+    println!("Tensor {tensor}");
+    let tensor = cov(&tensor, &device)?;
+    println!("Cov Tensor {tensor}");
+
+    let data = vec![80., 70., 80., 63., 20., 30., 100., 50., 50.];
+    let tensor = Tensor::from_slice(&data, (3, 3), &device)?;
+    println!("Tensor {tensor}");
     let tensor = cov(&tensor, &device)?;
     println!("Cov Tensor {tensor}");
 
     Ok(())
 }
-
 
 #[allow(dead_code)]
 fn variance_test() -> Result<(), Box<dyn std::error::Error>> {
@@ -253,18 +260,49 @@ fn variance_test() -> Result<(), Box<dyn std::error::Error>> {
 
     let data = vec![2., 4., 6., 1., 3., 5., 3., 6., 9., 4., 8., 12.];
     let data = Tensor::from_slice(&data, (4, 3), &device)?;
-    println!("Data {data}");
 
-    let mean = data.mean(0)?;
-    println!("Mean {mean}");
-
-    let variance = data.broadcast_sub(&mean)?.sqr()?.mean(0)?;
-    println!("Variance {variance}");
+    let rows = data.shape().dims2()?.0;
+    for row in 0..rows {
+        let row_tensor = data
+            .index_select(&Tensor::new(&[row as u32], &device)?, 0)?
+            .squeeze(0)?;
+        println!("row_tensor {row_tensor}");
+    }
 
     Ok(())
 }
 
+#[allow(dead_code)]
+fn r_square_test() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let y_true = vec![3., -0.5, 2., 7.];
+    let y_pred = vec![2.5, 0.0, 2., 8.];
+
+    let y_true = Tensor::from_slice(&y_true, (4,), &device)?;
+    let y_pred = Tensor::from_slice(&y_pred, (4,), &device)?;
+
+    let y_mean = y_true.mean(0).unwrap();
+    let ss_tot = y_true
+        .broadcast_sub(&y_mean)
+        .unwrap()
+        .sqr()
+        .unwrap()
+        .sum(D::Minus1)
+        .unwrap();
+    let ss_res = y_true
+        .broadcast_sub(&y_pred)
+        .unwrap()
+        .sqr()
+        .unwrap()
+        .sum(D::Minus1)
+        .unwrap();
+    let r_square = ss_res.broadcast_div(&ss_tot).unwrap();
+    println!("R Square: {:?}", r_square);
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    variance_test()?;
+    r_square_test()?;
     Ok(())
 }
