@@ -2,10 +2,7 @@ use candle_core::{DType, Device, Tensor, D};
 use ndarray::array;
 
 fn cdist(x1: &Tensor, x2: &Tensor) -> Result<Tensor, Box<dyn std::error::Error>> {
-    let dim1 = x1.shape().dims2()?;
     let x1 = x1.unsqueeze(0)?;
-
-    let dim2 = x2.shape().dims2()?;
     let x2 = x2.unsqueeze(1)?;
     Ok(x1
         .broadcast_sub(&x2)?
@@ -273,6 +270,22 @@ fn variance_test() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[allow(dead_code)]
+fn rmsnorm_test() -> Result<(), Box<dyn std::error::Error>> {
+    let device = Device::new_cuda(0)?;
+
+    let data = vec![2., 4., 6., 1., 3., 5., 3., 6., 9., 4., 8., 12.];
+    let data = Tensor::from_slice(&data, (4, 3), &device)?;
+    let hidden_size = data.dim(D::Minus1)?;
+    let eps = 1e-5;
+    let norm_x = ((data.sqr()?.sum_keepdim(D::Minus1)? / hidden_size as f64)? + eps)?.sqrt()?;
+    let x_norm = data.broadcast_div(&norm_x)?;
+    println!("Data {data}");
+    println!("Norm x {norm_x}");
+
+    Ok(())
+}
+
+#[allow(dead_code)]
 fn r_square_test() -> Result<(), Box<dyn std::error::Error>> {
     let device = Device::new_cuda(0)?;
 
@@ -303,6 +316,6 @@ fn r_square_test() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    r_square_test()?;
+    rmsnorm_test()?;
     Ok(())
 }
